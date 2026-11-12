@@ -86,14 +86,14 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
           </div>
           {state.availableDevices.length === 0 && (
             <p className="text-[10px] sm:text-xs text-red-500/80 mt-2">
-              Tidak ada kamera terdeteksi di perangkat ini.
+              Tidak ada kamera terdeteksi di perangkat ini. Coba tekan "Coba Lagi".
             </p>
           )}
         </div>
       )}
 
       {/* Camera viewport (live preview) */}
-      {state.isInitialized && !state.hasCaptured && (
+      {!state.hasCaptured && (
         <div className="flex-1 relative camera-viewport w-full">
           {/* Aspect ratio box untuk video - mencegah collapse/layar hitam */}
           <div
@@ -103,7 +103,12 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
             }}
           >
             <video
-              ref={videoRef}
+              ref={(el) => {
+                videoRef.current = el;
+                if (el) {
+                  el.setAttribute("webkitplaysinline", "true");
+                }
+              }}
               autoPlay
               playsInline
               muted
@@ -114,9 +119,9 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
             />
             <canvas ref={canvasRef} className="hidden" />
 
-            {/* Loading overlay while starting */}
-            {!state.isInitialized && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50">
+            {/* Loading overlay while starting - render saat belum diinisialisasi */}
+            {!state.isInitialized && !state.isError && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 z-20">
                 <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-3" />
                 <p className="text-white text-sm font-medium">
                   Memulai kamera…
@@ -213,7 +218,7 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
       )}
 
       {/* Initial state - not started */}
-      {!state.isInitialized && !state.isError && (
+      {!state.isInitialized && !state.isError && !state.hasCaptured && (
         <div className="flex-1 flex flex-col items-center justify-center camera-viewport w-full">
           <div className="flex flex-col items-center text-center">
             <div className="w-16 h-16 sm:w-20 sm:h-20 border-4 border-sj-brand/20 rounded-full flex items-center justify-center mb-3 sm:mb-4 bg-sj-brand/5">
@@ -226,7 +231,7 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
               Tekan tombol di bawah untuk memulai kamera dan mengambil foto.
             </p>
             <button
-              onClick={startCamera}
+              onClick={() => startCamera()}
               className="sj-btn-primary w-full sm:w-auto"
             >
               Mulai Kamera

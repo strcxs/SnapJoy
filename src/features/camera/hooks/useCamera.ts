@@ -78,7 +78,6 @@ export function useCamera({
     DEFAULT_FRAMES[0] ?? null
   );
 
-  // Cleanup stream on unmount
   useEffect(() => {
     return () => {
       stopStream();
@@ -98,10 +97,6 @@ export function useCamera({
     }));
   }
 
-  /**
-   * Deteksi perangkat kamera yang tersedia melalui enumerateDevices.
-   * Digunakan untuk mengetahui apakah ada kamera fisik dan fallback otomatis.
-   */
   const checkAvailableDevices = useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) {
       return;
@@ -114,7 +109,6 @@ export function useCamera({
       const videoDevices: CameraDevice[] = devices
         .filter((d) => d.kind === "videoinput")
         .map((d) => {
-          // Heuristik deteksi depan/belakang berdasarkan label
           const label = (d.label || "").toLowerCase();
           let facing: CameraFacingMode = "environment";
           if (
@@ -152,21 +146,14 @@ export function useCamera({
     }
   }, []);
 
-  // Cek perangkat saat mount
   useEffect(() => {
     checkAvailableDevices();
   }, [checkAvailableDevices]);
 
-  /**
-   * Tentukan facingMode yang akan digunakan dengan fallback otomatis.
-   * Jika facingMode yang diminta tidak tersedia dalam daftar perangkat,
-   * coba yang lainnya.
-   */
   const resolveFacingMode = useCallback(
     (requested: CameraFacingMode): CameraFacingMode => {
       const available = state.availableDevices;
       if (available.length === 0) {
-        // Tidak ada info perangkat, coba requested mode dulu
         return requested;
       }
 
@@ -175,7 +162,6 @@ export function useCamera({
         return requested;
       }
 
-      // Fallback ke mode lain
       const alternative: CameraFacingMode =
         requested === "environment" ? "user" : "environment";
       const hasAlternative = available.some((d) => d.facing === alternative);
@@ -188,7 +174,7 @@ export function useCamera({
     [state.availableDevices]
   );
 
-  const startCamera = useCallback(async () => {
+  const startCamera = useCallback(async (attempt = 0) => {
     stopStream();
 
     setState((prev) => ({
@@ -200,77 +186,73 @@ export function useCamera({
       hasCaptured: false,
     }));
 
-    // Resolve facingMode dengan fallback otomatis
-    const resolvedMode = resolveFacingMode(facingMode);
+    // enumerateDevices sering mengembalikan kosong di mobile sebelum izin.
+    // Jangan treat sebagai error — lanjutkan ke getUserMedia.
+    let resolvedMode = facingMode;
+    if (state.availableDevices.length > 0) {
+      resolvedMode = resolveFacingMode(facingMode);
+    }
 
-    try {
-      const constraints: MediaStreamConstraints = {
-        audio: false,
-        video: {
-          facingMode: resolvedMode,
-          width: {
-            min: 640,
-            ideal: videoWidth,
-            max: 1920,
-          },
-          height: {
-            min: 480,
-            ideal: videoHeight,
-            max: 2560,
-          },
+    const buildConstraints = (useFacingMode: boolean): MediaStreamConstraints => ({
+      audio: false,
+      video: {
+        ...(useFacingMode ? { facingMode: resolvedMode } : {}),
+        width: {
+          min: 640,
+          ideal: videoWidth,
+          max: 1920,
         },
-      };
+        height: {
+          min: 480,
+          ideal: videoHeight,
+          max: 2560,
+        },
+      },
+    });
 
-      console.log("Camera constraints:", constraints);
+    let lastError: any = null;
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
+    // Coba dengan facingMode dulu, lalu tanpa facingMode sebagai fallback terakhir
+    const attempts = state.availableDevices.length > 0 ? [true, false] : [false];
 
-      // Verifikasi stream memiliki video track
-      const videoTracks = stream.getVideoTracks();
-      if (videoTracks.length === 0) {
-        throw new Error("Stream tidak memiliki video track");
-      }
+    for (const useFacingMode of attempts) {
+      try {
+        console.log(
+          `Camera attempt ${attempt + 1}: facingMode=${
+            useFacingMode ? resolvedMode : "default"
+          }`
+        );
 
-      const videoTrack = videoTracks[0];
-      const settings = videoTrack.getSettings();
-      console.log("Camera track settings:", settings);
-      console.log("Camera track label:", videoTrack.label);
-      console.log("Camera deviceId:", settings.deviceId);
+        const constraints = buildConstraints(useFacingMode);
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        streamRef.current = stream;
 
-      const videoElement = videoRef.current;
-      if (!videoElement) {
-        throw new Error("Video element tidak tersedia");
-      }
+        const videoTracks = stream.getVideoTracks();
+        if (videoTracks.length === 0) {
+          stream.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
+          throw new Error("Stream tidak memiliki video track");
+        }
 
-      videoElement.srcObject = stream;
+        const videoTrack = videoTracks[0];
+        const settings = videoTrack.getSettings();
+        console.log("Camera track settings:", settings);
+        console.log("Camera track label:", videoTrack.label);
+        console.log("Camera deviceId:", settings.deviceId);
+        console.log("Camera facingMode:", settings.facingMode);
 
-      // Tunggu loadedmetadata untuk mendapatkan dimensi video aktual
-      await new Promise<void>((resolve, reject) => {
-        const handleLoaded = () => {
-          videoElement.removeEventListener(
-            "loadedmetadata",
-            handleLoaded
-          );
-          const vw = videoElement.videoWidth || 0;
-          const vh = videoElement.videoHeight || 0;
-          setState((prev) => ({
-            ...prev,
-            videoWidth: vw,
-            videoHeight: vh,
-          }));
-          resolve();
-        };
-        const handleError = (err: any) => {
-          videoElement.removeEventListener("error", handleError);
-          reject(err);
-        };
-        videoElement.addEventListener("loadedmetadata", handleLoaded);
-        videoElement.addEventListener("error", handleError);
+        const videoElement = videoRef.current;
+        if (!videoElement) {
+          stream.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
+          throw new Error("Video element tidak tersedia");
+        }
 
-        // Timeout fallback jika loadedmetadata tidak pernah datang
-        setTimeout(() => {
-          if (!state.isInitialized) {
+        videoElement.srcObject = stream;
+
+        await new Promise<void>((resolve, reject) => {
+          const handleLoaded = () => {
+            videoElement.removeEventListener("loadedmetadata", handleLoaded);
             const vw = videoElement.videoWidth || 0;
             const vh = videoElement.videoHeight || 0;
             setState((prev) => ({
@@ -279,117 +261,120 @@ export function useCamera({
               videoHeight: vh,
             }));
             resolve();
-          }
-        }, 2000);
-      });
+          };
+          const handleError = (err: any) => {
+            videoElement.removeEventListener("error", handleError);
+            reject(err);
+          };
+          videoElement.addEventListener("loadedmetadata", handleLoaded);
+          videoElement.addEventListener("error", handleError);
 
-      // Putar video dengan error handling
-      try {
-        await videoElement.play();
-      } catch (playErr) {
-        console.error("Video play error:", playErr);
-        // Autoplay mungkin diblokir, coba lagi setelah jeda
-        setTimeout(async () => {
-          try {
-            await videoElement.play();
-          } catch (retryErr) {
-            console.error("Video play retry failed:", retryErr);
-          }
-        }, 500);
-      }
-
-      setState((prev) => ({
-        ...prev,
-        isInitialized: true,
-        isPermissionDenied: false,
-        isError: false,
-        errorMessage: "",
-        errorName: null,
-        facingMode: resolvedMode,
-        isFrontCamera: resolvedMode === "user",
-      }));
-    } catch (err) {
-      console.error("Camera error:", err);
-
-      let errorName = "";
-      let errorMessage = "";
-      let isPermissionDenied = false;
-
-      if (err instanceof DOMException) {
-        errorName = err.name;
-        switch (err.name) {
-          case "NotAllowedError":
-            isPermissionDenied = true;
-            errorMessage =
-              "Izin kamera ditolak. Silakan aktifkan izin kamera di pengaturan browser dan coba lagi.";
-            break;
-          case "NotFoundError":
-            errorMessage =
-              "Kamera tidak ditemukan. Pastikan perangkat Anda memiliki kamera dan tidak digunakan aplikasi lain.";
-            break;
-          case "NotReadableError":
-            errorMessage =
-              "Kamera tidak dapat diakses. Mungkin sedang digunakan aplikasi lain atau terkunci.";
-            break;
-          case "OverconstrainedError":
-            errorMessage =
-              "Constraint kamera tidak didukung perangkat. Mencoba dengan pengaturan default…";
-            break;
-          case "TypeError":
-            errorMessage =
-              "Parameter kamera tidak valid. Silakan coba kamera lain.";
-            break;
-          case "SecurityError":
-            errorMessage =
-              "Akses kamera diblokir untuk alasan keamanan. Gunakan HTTPS atau localhost.";
-            break;
-          default:
-            errorMessage = `Terjadi kesalahan kamera: ${err.message}`;
-        }
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
-      } else {
-        errorMessage = "Terjadi kesalahan tidak diketahui saat mengakses kamera.";
-      }
-
-      // Coba fallback ke kamera lain jika NotFoundError atau OverconstrainedError
-      const canFallback =
-        errorName === "NotFoundError" ||
-        errorName === "OverconstrainedError" ||
-        errorName === "TypeError";
-
-      if (canFallback && resolvedMode !== facingMode === false) {
-        const alternative: CameraFacingMode =
-          resolvedMode === "environment" ? "user" : "environment";
-        const hasAlt = state.availableDevices.some(
-          (d) => d.facing === alternative
-        );
-
-        if (hasAlt || state.availableDevices.length === 0) {
-          // Set timeout lalu coba fallback
-          setTimeout(async () => {
+          setTimeout(() => {
+            const vw = videoElement.videoWidth || 0;
+            const vh = videoElement.videoHeight || 0;
             setState((prev) => ({
               ...prev,
-              facingMode: alternative,
-              isFrontCamera: alternative === "user",
+              videoWidth: vw,
+              videoHeight: vh,
             }));
-            await startCamera();
-          }, 1000);
-          return;
+            resolve();
+          }, 3000);
+        });
+
+        try {
+          await videoElement.play();
+        } catch (playErr) {
+          console.error("Video play error:", playErr);
+          setTimeout(async () => {
+            try {
+              await videoElement.play();
+            } catch (retryErr) {
+              console.error("Video play retry failed:", retryErr);
+            }
+          }, 500);
+        }
+
+        const detectedFacing =
+          settings.facingMode === "user" ? "user" : "environment";
+
+        setState((prev) => ({
+          ...prev,
+          isInitialized: true,
+          isPermissionDenied: false,
+          isError: false,
+          errorMessage: "",
+          errorName: null,
+          facingMode: detectedFacing,
+          isFrontCamera: detectedFacing === "user",
+        }));
+
+        return;
+      } catch (err) {
+        lastError = err;
+        console.error(
+          `Camera attempt ${attempt + 1} (facingMode=${useFacingMode}) failed:`,
+          err
+        );
+
+        if (err instanceof DOMException && err.name === "NotAllowedError") {
+          break;
         }
       }
-
-      setState((prev) => ({
-        ...prev,
-        isError: true,
-        isPermissionDenied,
-        errorMessage,
-        errorName,
-      }));
-
-      onError?.(errorMessage, errorName);
     }
-  }, [facingMode, videoWidth, videoHeight, onError, state.availableDevices, resolveFacingMode, state.isInitialized]);
+
+    console.error("Camera error:", lastError);
+
+    let errorName = "";
+    let errorMessage = "";
+    let isPermissionDenied = false;
+
+    if (lastError instanceof DOMException) {
+      errorName = lastError.name;
+      switch (lastError.name) {
+        case "NotAllowedError":
+          isPermissionDenied = true;
+          errorMessage =
+            "Izin kamera ditolak. Silakan aktifkan izin kamera di pengaturan browser dan coba lagi.";
+          break;
+        case "NotFoundError":
+          errorMessage =
+            "Kamera tidak ditemukan. Pastikan perangkat Anda memiliki kamera dan tidak digunakan aplikasi lain.";
+          break;
+        case "NotReadableError":
+          errorMessage =
+            "Kamera tidak dapat diakses. Mungkin sedang digunakan aplikasi lain atau terkunci.";
+          break;
+        case "OverconstrainedError":
+          errorMessage =
+            "Constraint kamera tidak didukung perangkat. Coba ganti kamera.";
+          break;
+        case "TypeError":
+          errorMessage =
+            "Parameter kamera tidak valid. Silakan coba kamera lain.";
+          break;
+        case "SecurityError":
+          errorMessage =
+            "Akses kamera diblokir untuk alasan keamanan. Gunakan HTTPS atau localhost.";
+          break;
+        default:
+          errorMessage = `Terjadi kesalahan kamera: ${lastError.message}`;
+      }
+    } else if (lastError instanceof Error) {
+      errorMessage = lastError.message;
+    } else {
+      errorMessage = "Terjadi kesalahan tidak diketahui saat mengakses kamera.";
+    }
+
+    setState((prev) => ({
+      ...prev,
+      isError: true,
+      isPermissionDenied,
+      errorMessage,
+      errorName,
+    }));
+
+    onError?.(errorMessage, errorName);
+  }, [facingMode, videoWidth, videoHeight, onError, state.availableDevices, resolveFacingMode]);
 
   const switchCamera = useCallback(async () => {
     const newMode: CameraFacingMode =
@@ -407,7 +392,6 @@ export function useCamera({
       const video = videoRef.current;
       const canvas = canvasRef.current;
 
-      // Gunakan dimensi video aktual, fallback ke canvas size
       const vw = video.videoWidth || canvas.width || videoWidth;
       const vh = video.videoHeight || canvas.height || videoHeight;
 
@@ -426,10 +410,8 @@ export function useCamera({
       setState((prev) => ({ ...prev, isCapturing: true }));
 
       try {
-        // Draw captured video frame
         ctx.drawImage(video, 0, 0, vw, vh);
 
-        // Apply filter via canvas pixel manipulation
         const filterPreset = FILTER_PRESETS.find(
           (f) => f.key === currentFilter.key
         );
@@ -437,12 +419,10 @@ export function useCamera({
           applyCanvasFilter(ctx, vw, vh, filterPreset.canvasConfig);
         }
 
-        // Draw frame overlay if configured
         if (currentFrame) {
           await drawFrameOverlay(ctx, vw, vh, currentFrame);
         }
 
-        // Export to blob
         const blob = await new Promise<Blob | null>((resolve) => {
           canvas.toBlob((b) => resolve(b), "image/webp", 0.92);
         });
@@ -534,17 +514,23 @@ export function useCamera({
       }
 
       if (sepia > 0) {
-        const sr = r * (1 - sepia) + (r * 0.393 + g * 0.769 + b * 0.189) * sepia;
-        const sg = g * (1 - sepia) + (r * 0.349 + g * 0.686 + b * 0.168) * sepia;
-        const sb = b * (1 - sepia) + (r * 0.272 + g * 0.534 + b * 0.131) * sepia;
-        r = sr; g = sg; b = sb;
+        const sr =
+          r * (1 - sepia) + (r * 0.393 + g * 0.769 + b * 0.189) * sepia;
+        const sg =
+          g * (1 - sepia) + (r * 0.349 + g * 0.686 + b * 0.168) * sepia;
+        const sb =
+          b * (1 - sepia) + (r * 0.272 + g * 0.534 + b * 0.131) * sepia;
+        r = sr;
+        g = sg;
+        b = sb;
       }
 
       r *= brightness;
       g *= brightness;
       b *= brightness;
 
-      const contrastFactor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+      const contrastFactor =
+        (259 * (contrast + 255)) / (255 * (259 - contrast));
       r = contrastFactor * (r - 128) + 128;
       g = contrastFactor * (g - 128) + 128;
       b = contrastFactor * (b - 128) + 128;
@@ -583,15 +569,8 @@ export function useCamera({
 
     ctx.drawImage(img, 0, offsetY, canvasWidth, frameH);
 
-    // Re-draw photo on top of frame at photo viewport
     if (videoRef.current) {
-      ctx.drawImage(
-        videoRef.current,
-        photoX,
-        photoY,
-        photoW,
-        photoH
-      );
+      ctx.drawImage(videoRef.current, photoX, photoY, photoW, photoH);
     }
   };
 
