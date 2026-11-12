@@ -70,18 +70,24 @@ body {
   height: 100%;
   object-fit: cover;
   transform: scaleX(1);
+  -webkit-transform: scaleX(1);
   /* Mencegah video menjadi hitam saat baru dimuat */
   background: #000;
+  display: block;
+  margin: 0;
+  padding: 0;
 }
 
 .camera-video.mirrored {
   transform: scaleX(-1);
+  -webkit-transform: scaleX(-1);
 }
 
-/* Ensure video element has proper sizing on mobile */
+/* Ensure video element has proper sizing on mobile and iOS Safari */
 .camera-viewport video {
   width: 100%;
   height: 100%;
+  display: block;
 }
 
 .canvas-result {
