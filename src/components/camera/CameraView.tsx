@@ -60,13 +60,35 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
           <h3 className="text-lg font-semibold text-red-800 mb-2">
             Kamera tidak tersedia
           </h3>
-          <p className="text-sm text-red-600 mb-4">{state.errorMessage}</p>
-          <button
-            onClick={() => startCamera()}
-            className="sj-btn-primary w-full sm:w-auto"
-          >
-            Coba Lagi
-          </button>
+          <p className="text-sm text-red-600 mb-3">
+            {state.errorMessage}
+          </p>
+          {state.errorName && (
+            <p className="text-[10px] sm:text-xs text-red-500/80 mb-4">
+              {state.errorName}
+            </p>
+          )}
+          <div className="flex flex-col gap-2 sm:flex-row justify-center">
+            <button
+              onClick={() => startCamera()}
+              className="sj-btn-primary w-full sm:w-auto"
+            >
+              Coba Lagi
+            </button>
+            {state.availableDevices.length > 0 && (
+              <button
+                onClick={switchCamera}
+                className="sj-btn-outline w-full sm:w-auto"
+              >
+                Ganti Kamera
+              </button>
+            )}
+          </div>
+          {state.availableDevices.length === 0 && (
+            <p className="text-[10px] sm:text-xs text-red-500/80 mt-2">
+              Tidak ada kamera terdeteksi di perangkat ini.
+            </p>
+          )}
         </div>
       )}
 
@@ -85,6 +107,8 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
               autoPlay
               playsInline
               muted
+              width={state.videoWidth || 640}
+              height={state.videoHeight || 480}
               className="camera-video w-full h-full object-cover"
               style={{ filter: currentFilter.cssFilter }}
             />
@@ -207,6 +231,11 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
             >
               Mulai Kamera
             </button>
+            {state.availableDevices.length > 0 && (
+              <p className="text-[10px] sm:text-xs text-sj-muted mt-2">
+                {state.availableDevices.length} kamera terdeteksi
+              </p>
+            )}
           </div>
         </div>
       )}
