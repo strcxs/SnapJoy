@@ -273,7 +273,104 @@ Untuk perubahan berisiko, jelaskan terlebih dahulu:
 3. Dampak dan risiko yang mungkin terjadi.
 4. Cara mitigasi atau rollback.
 
-## 7. AI Response Format
+## 7. Git and Branch Management
+
+Gunakan Git agar setiap task dapat ditelusuri, ditinjau, dan dipisahkan dari pekerjaan lain. Setiap task yang selesai harus memiliki commit tersendiri pada branch khusus task tersebut.
+
+### 7.1 Branching Strategy
+
+- Jangan mengerjakan task langsung pada `main`, `master`, atau branch utama project.
+- Gunakan satu branch khusus untuk satu task atau satu kelompok perubahan yang saling berkaitan.
+- Buat branch baru dari branch dasar yang disepakati (umumnya `main` atau `develop`) ketika memulai task baru.
+- Gunakan nama branch yang singkat, deskriptif, konsisten, dan menggunakan huruf kecil.
+- Gunakan prefix berikut:
+  - `feat/` — fitur baru, contoh: `feat/locker-payment`
+  - `fix/` — perbaikan bug, contoh: `fix/login-validation`
+  - `hotfix/` — perbaikan mendesak, contoh: `hotfix/payment-callback`
+  - `refactor/` — refactoring, contoh: `refactor/user-service`
+  - `docs/` — dokumentasi, contoh: `docs/api-guidelines`
+  - `chore/` — konfigurasi atau pemeliharaan, contoh: `chore/update-dependencies`
+
+### 7.2 Before Starting a Task
+
+1. Periksa branch aktif dengan `git branch --show-current`.
+2. Periksa kondisi working tree dengan `git status --short`.
+3. Periksa perubahan lokal sebelum checkout, pull, merge, atau membuat branch.
+4. Jangan menimpa, menghapus, melakukan stash, atau memasukkan perubahan lokal milik pengguna tanpa izin.
+5. Jika working tree bersih, pastikan branch dasar sudah diperbarui sesuai workflow project, lalu buat dan pindah ke branch task baru.
+6. Jika ada perubahan belum di-commit yang kepemilikan atau ruang lingkupnya tidak jelas, berhenti dan minta arahan. Jangan mencampur perubahan tersebut ke task baru.
+
+Contoh:
+```bash
+git status --short
+git switch main
+git pull --ff-only
+git switch -c feat/nama-fitur
+```
+
+Sesuaikan `main` dengan branch dasar project yang sebenarnya. Jangan menjalankan `pull` atau mengganti branch otomatis jika kondisi repository atau workflow tim belum jelas.
+
+### 7.3 After Completing a Task
+
+Setelah implementasi dan verifikasi task selesai:
+
+1. Tinjau `git status` dan `git diff` untuk memastikan hanya perubahan relevan yang akan di-commit.
+2. Pastikan tidak ada credential, `.env`, file rahasia, file hasil build, atau file lokal yang tidak seharusnya masuk repository.
+3. Jalankan pemeriksaan relevan sesuai bagian Testing and Verification Policy.
+4. Stage hanya file yang terkait dengan task; hindari `git add .` jika terdapat perubahan lain yang tidak terkait.
+5. Buat commit dengan pesan jelas dan ikuti Conventional Commits jika sesuai.
+6. Periksa hasil commit dan catat hash commit serta branch yang digunakan.
+7. Laporkan status Git kepada pengguna.
+
+Contoh:
+```bash
+git status --short
+git diff
+git add path/to/changed-file
+git commit -m "feat: add locker payment flow"
+git status --short
+git log -1 --oneline
+```
+
+### 7.4 Commit Message Convention
+
+Utamakan format:
+```text
+<type>: <short description>
+```
+
+Jenis commit yang disarankan:
+- `feat:` penambahan fitur.
+- `fix:` perbaikan bug.
+- `refactor:` perubahan struktur kode tanpa mengubah perilaku yang dimaksud.
+- `docs:` perubahan dokumentasi.
+- `style:` perubahan formatting yang tidak mengubah logic.
+- `test:` perubahan atau penambahan test.
+- `chore:` pemeliharaan konfigurasi atau dependency.
+- `perf:` optimasi performa.
+
+Gunakan deskripsi singkat yang menjelaskan perubahan, bukan pesan generik seperti `update`, `changes`, atau `fix bug`.
+
+### 7.5 Branch Lifecycle and Safety
+
+- Satu task yang selesai harus diakhiri dengan commit pada branch task tersebut.
+- **Jangan membuat branch kosong baru setelah setiap commit hanya untuk ditinggalkan.** Buat branch baru ketika task berikutnya mulai, berdasarkan branch dasar yang benar. Dengan demikian, setiap branch merepresentasikan pekerjaan yang jelas.
+- Jangan menggabungkan branch, menghapus branch, push ke remote, membuat release/tag, atau melakukan deployment tanpa instruksi atau otorisasi sesuai workflow project.
+- Jangan pernah menggunakan `git reset --hard`, `git clean -fd`, force push, atau perintah yang dapat menghilangkan pekerjaan tanpa persetujuan eksplisit.
+- Jika commit gagal karena hook, konflik, identitas Git, atau masalah lain, jangan menonaktifkan pemeriksaan secara otomatis. Jelaskan penyebabnya dan minta arahan bila diperlukan.
+- Jika pengguna secara eksplisit meminta perubahan tanpa commit, ikuti instruksi tersebut dan jelaskan bahwa perubahan belum di-commit.
+- Jika AI tidak memiliki akses Git atau tidak dapat menjalankan command, jangan mengklaim commit atau branch telah dibuat. Berikan command yang perlu dijalankan pengguna.
+
+### 7.6 Git Information in Delivery Summary
+
+Setiap laporan penyelesaian task wajib menyertakan:
+- Nama branch task.
+- Commit hash dan commit message, jika commit berhasil dibuat.
+- Status working tree setelah commit.
+- Status push/remote jika memang diperiksa; jangan mengasumsikan commit lokal sudah dikirim ke remote.
+- Perubahan yang belum di-commit atau kendala Git, jika ada.
+
+## 8. AI Response Format
 
 Untuk setiap task development, gunakan format yang proporsional dengan kompleksitas pekerjaan. Jangan memaksakan penjelasan panjang untuk perubahan kecil.
 
@@ -301,7 +398,7 @@ Nyatakan pemeriksaan yang benar-benar dilakukan, hasilnya, dan bagian yang belum
 
 Daftarkan file/fitur yang diubah serta catatan penting atau langkah manual yang masih diperlukan.
 
-## 8. Master Instruction for the AI Agent
+## 9. Master Instruction for the AI Agent
 
 Gunakan instruksi berikut sebagai aturan operasional utama:
 
@@ -318,8 +415,10 @@ Gunakan instruksi berikut sebagai aturan operasional utama:
 > If a requirement is materially ambiguous or a proposed action is risky, ask for clarification or approval before proceeding. Otherwise, proceed autonomously within the stated scope.
 >
 > At delivery, report what was implemented, which files were changed, important technical decisions, what was actually verified, and anything that remains incomplete or unverified. Be precise and transparent.
+>
+> Use Git task branches: start each new task on a dedicated, descriptively named branch, inspect the working tree before switching branches, and commit completed task changes with a clear commit message after reviewing the diff. Never include unrelated user changes, expose secrets, or perform destructive Git operations. Do not push, merge, or delete branches without authorization. Report the branch name, commit hash, commit message, and final working-tree status. Create the next task branch when the next task begins; do not create an unused empty branch after every commit.
 
-## 9. Priority Rules
+## 10. Priority Rules
 
 Jika terjadi konflik antar instruksi, gunakan urutan prioritas berikut:
 
