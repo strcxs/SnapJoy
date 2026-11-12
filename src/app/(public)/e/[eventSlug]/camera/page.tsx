@@ -109,32 +109,32 @@ export default function CameraPage({
   return (
     <div className="flex flex-col h-screen w-full bg-black text-white overflow-hidden">
       {/* Header */}
-      <header className="px-4 py-3 flex items-center justify-between bg-black/40 backdrop-blur-sm z-10 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-sj-accent flex items-center justify-center text-sj-brand font-bold text-xs">
+      <header className="px-3 py-2 sm:px-4 sm:py-3 flex items-center justify-between bg-black/40 backdrop-blur-sm z-10 border-b border-white/10">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-sj-accent flex items-center justify-center text-sj-brand font-bold text-xs sm:text-xs">
             SQ
           </div>
           <div>
-            <h1 className="text-sm font-semibold tracking-tight">{decodeURIComponent(
+            <h1 className="text-xs sm:text-sm font-semibold tracking-tight">{decodeURIComponent(
               eventSlug.replace(/-/g, " ")
             )}</h1>
-            <p className="text-xs text-white/60">Galeri bersama</p>
+            <p className="text-[10px] sm:text-xs text-white/60">Galeri bersama</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-xs font-medium text-white/90">Aktif</span>
+        <div className="flex items-center gap-1 sm:gap-2">
+          <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-[10px] sm:text-xs font-medium text-white/90">Aktif</span>
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4">
+      <main className="flex-1 overflow-y-auto p-2 sm:p-4">
         {/* Upload error toast */}
         {uploadError && (
-          <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/20 border border-red-500/30 text-red-100">
-            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <div className="mb-3 sm:mb-4 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-red-500/20 border border-red-500/30 text-red-100">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
             </svg>
-            <p className="text-sm">{uploadError}</p>
+            <p className="text-[11px] sm:text-sm">{uploadError}</p>
           </div>
         )}
 
@@ -153,12 +153,12 @@ export default function CameraPage({
 
       {/* Uploading toast */}
       {isUploading && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2">
-          <div className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-white text-sj-brand shadow-xl border border-sj-brand/20">
-            <div className="w-8 h-8 border-4 border-sj-brand border-t-transparent rounded-full animate-spin" />
+        <div className="fixed bottom-3 sm:bottom-6 left-1/2 sm:left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-3 rounded-2xl bg-white text-sj-brand shadow-xl border border-sj-brand/20">
+            <div className="w-6 h-6 sm:w-8 sm:h-8 border-3 sm:border-4 border-sj-brand border-t-transparent rounded-full animate-spin" />
             <div>
-              <p className="text-sm font-semibold">Mengunggah foto…</p>
-              <p className="text-xs text-sj-muted">Mohon tunggu sebentar</p>
+              <p className="text-[11px] sm:text-sm font-semibold">Mengunggah foto…</p>
+              <p className="text-[10px] sm:text-xs text-sj-muted">Mohon tunggu sebentar</p>
             </div>
           </div>
         </div>
