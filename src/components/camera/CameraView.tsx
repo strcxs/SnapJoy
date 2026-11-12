@@ -25,19 +25,45 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
     stopStream,
   } = useCamera();
 
+  // Hitung aspect ratio untuk viewport kamera
+  const aspectRatio =
+    state.videoWidth && state.videoHeight
+      ? state.videoWidth / state.videoHeight
+      : 3 / 4;
+
+  const filterButtonClass = (filter: FilterPreset) => {
+    const isActive = currentFilter.key === filter.key;
+    return `flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all ${isActive
+      ? "bg-sj-brand text-white shadow-sm"
+      : "bg-white/20 backdrop-blur-sm text-white/90 hover:bg-white/30"}`;
+  };
+
+  const frameButtonClass = (frame: FrameOption) => {
+    const isActive = currentFrame?.id === frame.id;
+    return `w-12 h-16 rounded-lg border-2 transition-all ${isActive
+      ? "border-sj-accent shadow-sm"
+      : "border-transparent bg-white/20 hover:border-white/40"}`;
+  };
+
+  const shutterButtonClass = () => {
+    return `relative w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white flex items-center justify-center transition-all active:scale-95 disabled:opacity-50 ${
+      state.isCapturing ? "border-white/50" : "bg-white"
+    }`;
+  };
+
   return (
-    <div className="flex flex-col h-full w-full max-w-[500px] mx-auto">
+    <div className="flex flex-col h-full w-full max-w-[500px] mx-auto p-2 sm:p-4">
       {/* Error / Permission state */}
       {state.isError && !state.isInitialized && (
-        <div className="flex flex-col items-center justify-center py-10 text-center rounded-2xl bg-red-50 border border-red-100 p-6">
-          <div className="text-4xl mb-4">📷</div>
+        <div className="flex flex-col items-center justify-center py-6 text-center rounded-2xl bg-red-50 border border-red-100 p-4 sm:p-6">
+          <div className="text-4xl mb-3">📷</div>
           <h3 className="text-lg font-semibold text-red-800 mb-2">
             Kamera tidak tersedia
           </h3>
-          <p className="text-sm text-red-600 mb-6">{state.errorMessage}</p>
+          <p className="text-sm text-red-600 mb-4">{state.errorMessage}</p>
           <button
             onClick={() => startCamera()}
-            className="sj-btn-primary"
+            className="sj-btn-primary w-full sm:w-auto"
           >
             Coba Lagi
           </button>
@@ -46,28 +72,39 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
 
       {/* Camera viewport (live preview) */}
       {state.isInitialized && !state.hasCaptured && (
-        <div className="flex-1 relative camera-viewport">
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            className={`camera-video ${state.isFrontCamera ? "mirrored" : ""}`}
-            style={{ filter: currentFilter.cssFilter }}
-          />
-          <canvas ref={canvasRef} className="hidden" />
+        <div className="flex-1 relative camera-viewport w-full">
+          {/* Aspect ratio box untuk video - mencegah collapse/layar hitam */}
+          <div
+            className="relative w-full overflow-hidden bg-black rounded-xl"
+            style={{
+              aspectRatio: aspectRatio > 0 ? aspectRatio : 3 / 4,
+            }}
+          >
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="camera-video w-full h-full object-cover"
+              style={{ filter: currentFilter.cssFilter }}
+            />
+            <canvas ref={canvasRef} className="hidden" />
 
-          {/* Loading overlay while starting */}
-          {!state.isInitialized && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
-              <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-4" />
-              <p className="text-white text-sm font-medium">Memulai kamera...</p>
-            </div>
-          )}
+            {/* Loading overlay while starting */}
+            {!state.isInitialized && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50">
+                <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-3" />
+                <p className="text-white text-sm font-medium">
+                  Memulai kamera…
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* Capture overlay controls */}
-          <div className="absolute inset-0 flex flex-col justify-between p-4 pointer-events-none">
-            <div className="flex items-center justify-between px-4">
-              <div className="flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full text-white text-sm font-medium">
+          <div className="absolute inset-0 flex flex-col justify-between p-3 sm:p-4 pointer-events-none">
+            <div className="flex items-center justify-between px-2 sm:px-4">
+              <div className="flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-white text-xs sm:text-sm font-medium">
                 {state.facingMode === "environment"
                   ? "Kamera Belakang"
                   : "Kamera Depan"}
@@ -79,25 +116,21 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
                 aria-label="Ganti kamera depan/belakang"
                 aria-pressed={false}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656-2.12 2.122" />
                 </svg>
               </button>
             </div>
 
-            <div className="flex flex-col items-center justify-end flex-1 pr-4">
+            <div className="flex flex-col items-center justify-end flex-1 pr-2 sm:pr-4">
               {/* Filter selector */}
-              <div className="flex flex-row gap-2 overflow-x-auto pb-4 scrollbar-hide">
+              <div className="flex flex-row gap-2 overflow-x-auto pb-3 sm:pb-4 scrollbar-hide">
                 {filters.map((filter: FilterPreset) => (
                   <button
                     key={filter.key}
                     onClick={() => setFilter(filter)}
                     aria-pressed={currentFilter.key === filter.key}
-                    className={`flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                      currentFilter.key === filter.key
-                        ? "bg-sj-brand text-white shadow-sm"
-                        : "bg-white/20 backdrop-blur-sm text-white/90 hover:bg-white/30"
-                    }`}
+                    className={filterButtonClass(filter)}
                   >
                     <span className="w-3 h-3 rounded-full border border-white/20"></span>
                     {filter.label}
@@ -107,17 +140,13 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
 
               {/* Frame selector */}
               {frames.length > 1 && (
-                <div className="flex flex-row gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide">
+                <div className="flex flex-row gap-2 overflow-x-auto px-2 sm:px-4 pb-2 sm:pb-4 scrollbar-hide">
                   {frames.map((frame: FrameOption) => (
                     <button
                       key={frame.id}
                       onClick={() => setFrame(frame)}
                       aria-pressed={currentFrame?.id === frame.id}
-                      className={`w-12 h-16 rounded-lg border-2 transition-all ${
-                        currentFrame?.id === frame.id
-                          ? "border-sj-accent shadow-sm"
-                          : "border-transparent bg-white/20 hover:border-white/40"
-                      }`}
+                      className={frameButtonClass(frame)}
                     >
                       <img
                         src={frame.previewPath || frame.assetPath}
@@ -129,8 +158,8 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
                 </div>
               )}
 
-              {/* Shutter button */}
-              <div className="flex-1 flex items-end justify-center pb-6">
+              {/* Shutter button - lebih besar untuk mobile (thumb-friendly) */}
+              <div className="flex-1 flex items-end justify-center pb-4 sm:pb-6">
                 <button
                   onClick={async () => {
                     const result = await capture();
@@ -139,14 +168,12 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
                     }
                   }}
                   disabled={state.isCapturing || !state.isInitialized}
-                  className={`relative w-20 h-20 rounded-full border-4 border-white flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 ${
-                    state.isCapturing ? "border-white/50" : "bg-white"
-                  }`}
+                  className={shutterButtonClass()}
                   aria-label="Ambil foto"
                 >
-                  <div className="w-12 h-12 rounded-full bg-white/20" />
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/20" />
                   {state.isCapturing && (
-                    <div className="absolute inset-0 flex items-center justify-center text-white text-xs font-medium animate-pulse">
+                    <div className="absolute inset-0 flex items-center justify-center text-white text-xs sm:text-sm font-medium animate-pulse">
                       Memproses…
                     </div>
                   )}
@@ -154,7 +181,7 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
               </div>
             </div>
 
-            <div className="absolute bottom-4 left-4 text-white text-xs font-medium bg-black/50 backdrop-blur-sm px-3 py-1 rounded-full">
+            <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 text-white text-xs sm:text-sm font-medium bg-black/60 backdrop-blur-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
               {state.facingMode === "environment" ? "Kamera Belakang Aktif" : "Kamera Depan Aktif"}
             </div>
           </div>
@@ -163,15 +190,15 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
 
       {/* Initial state - not started */}
       {!state.isInitialized && !state.isError && (
-        <div className="flex-1 flex flex-col items-center justify-center camera-viewport">
+        <div className="flex-1 flex flex-col items-center justify-center camera-viewport w-full">
           <div className="flex flex-col items-center text-center">
-            <div className="w-16 h-16 border-4 border-sj-brand/20 rounded-full flex items-center justify-center mb-4 bg-sj-brand/5">
-              <svg className="w-8 h-8 text-sj-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 border-4 border-sj-brand/20 rounded-full flex items-center justify-center mb-3 sm:mb-4 bg-sj-brand/5">
+              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-sj-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-sj-brand mb-2">Mulai Foto</h3>
-            <p className="text-sj-muted text-sm mb-8 max-w-xs">
+            <h3 className="text-lg sm:text-xl font-semibold text-sj-brand mb-2">Mulai Foto</h3>
+            <p className="text-sm sm:text-base text-sj-muted mb-6 sm:mb-8 max-w-xs">
               Tekan tombol di bawah untuk memulai kamera dan mengambil foto.
             </p>
             <button

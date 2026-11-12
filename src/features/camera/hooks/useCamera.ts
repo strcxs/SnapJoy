@@ -42,6 +42,8 @@ export function useCamera({
     isCapturing: boolean;
     hasCaptured: boolean;
     isUploading: boolean;
+    videoWidth: number;
+    videoHeight: number;
   }>({
     isInitialized: false,
     isPermissionDenied: false,
@@ -52,6 +54,8 @@ export function useCamera({
     isCapturing: false,
     hasCaptured: false,
     isUploading: false,
+    videoWidth: 0,
+    videoHeight: 0,
   });
 
   const [currentFilter, setCurrentFilter] = useState<FilterPreset>(
@@ -73,6 +77,12 @@ export function useCamera({
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    setState((prev) => ({
+      ...prev,
+      isInitialized: false,
+      videoWidth: 0,
+      videoHeight: 0,
+    }));
   }
 
   const startCamera = useCallback(async () => {
@@ -87,6 +97,7 @@ export function useCamera({
     }));
 
     try {
+      // 'muted' diperlukan untuk autoplay di beberapa browser
       const constraints: MediaStreamConstraints = {
         audio: false,
         video: {
@@ -99,9 +110,48 @@ export function useCamera({
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+      const videoElement = videoRef.current;
+      if (videoElement) {
+        videoElement.srcObject = stream;
+        // Tunggu metadata loaded sebelum set isInitialized
+        await new Promise<void>((resolve, reject) => {
+          const handleLoaded = () => {
+            videoElement.removeEventListener(
+              "loadedmetadata",
+              handleLoaded
+            );
+            const vw = videoElement.videoWidth || 0;
+            const vh = videoElement.videoHeight || 0;
+            setState((prev) => ({
+              ...prev,
+              videoWidth: vw,
+              videoHeight: vh,
+            }));
+            resolve();
+          };
+          const handleError = (err: any) => {
+            videoElement.removeEventListener("error", handleError);
+            reject(err);
+          };
+          videoElement.addEventListener("loadedmetadata", handleLoaded);
+          videoElement.addEventListener("error", handleError);
+
+          // Timeout fallback jika loadedmetadata tidak pernah datang
+          setTimeout(() => {
+            if (!state.isInitialized) {
+              const vw = videoElement.videoWidth || 0;
+              const vh = videoElement.videoHeight || 0;
+              setState((prev) => ({
+                ...prev,
+                videoWidth: vw,
+                videoHeight: vh,
+              }));
+              resolve();
+            }
+          }, 1000);
+        });
+
+        await videoElement.play();
       }
 
       setState((prev) => ({
@@ -133,7 +183,7 @@ export function useCamera({
           : "Tidak dapat mengakses kamera."
       );
     }
-  }, [facingMode, videoWidth, videoHeight, onError]);
+  }, [facingMode, videoWidth, videoHeight, onError, state.isInitialized]);
 
   const switchCamera = useCallback(async () => {
     const newMode: CameraFacingMode =
@@ -151,9 +201,12 @@ export function useCamera({
       const video = videoRef.current;
       const canvas = canvasRef.current;
 
-      // Set canvas dimensions to match video
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      // Gunakan dimensi video aktual, fallback ke canvas size
+      const vw = video.videoWidth || canvas.width || videoWidth;
+      const vh = video.videoHeight || canvas.height || videoHeight;
+
+      canvas.width = vw;
+      canvas.height = vh;
 
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
       if (!ctx) {
@@ -164,19 +217,19 @@ export function useCamera({
 
       try {
         // Draw captured video frame
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(video, 0, 0, vw, vh);
 
-        // Apply filter via canvas pixel manipulation or CSS-equivalent
+        // Apply filter via canvas pixel manipulation
         const filterPreset = FILTER_PRESETS.find(
           (f) => f.key === currentFilter.key
         );
         if (filterPreset && Object.keys(filterPreset.canvasConfig).length > 0) {
-          applyCanvasFilter(ctx, canvas.width, canvas.height, filterPreset.canvasConfig);
+          applyCanvasFilter(ctx, vw, vh, filterPreset.canvasConfig);
         }
 
         // Draw frame overlay if configured
         if (currentFrame) {
-          await drawFrameOverlay(ctx, canvas.width, canvas.height, currentFrame);
+          await drawFrameOverlay(ctx, vw, vh, currentFrame);
         }
 
         // Export to blob
@@ -193,8 +246,8 @@ export function useCamera({
         const result: PhotoResult = {
           blob,
           dataUrl,
-          width: canvas.width,
-          height: canvas.height,
+          width: vw,
+          height: vh,
           filterKey: currentFilter.key,
           frameId: currentFrame?.id ?? null,
         };
@@ -217,7 +270,7 @@ export function useCamera({
         return null;
       }
     },
-    [currentFilter, currentFrame]
+    [currentFilter, currentFrame, videoWidth, videoHeight]
   );
 
   const retake = useCallback(() => {
@@ -258,14 +311,11 @@ export function useCamera({
       grayscale = 0,
     } = config;
 
-    // Simple color matrix approach for brightness, contrast, saturate
-    // This is a basic implementation; for production, consider WebGL
     for (let i = 0; i < data.length; i += 4) {
       let r = data[i];
       let g = data[i + 1];
       let b = data[i + 2];
 
-      // Grayscale
       if (grayscale > 0) {
         const gray = 0.299 * r + 0.587 * g + 0.114 * b;
         r = r * (1 - grayscale) + gray * grayscale;
@@ -273,7 +323,6 @@ export function useCamera({
         b = b * (1 - grayscale) + gray * grayscale;
       }
 
-      // Sepia
       if (sepia > 0) {
         const sr = r * (1 - sepia) + (r * 0.393 + g * 0.769 + b * 0.189) * sepia;
         const sg = g * (1 - sepia) + (r * 0.349 + g * 0.686 + b * 0.168) * sepia;
@@ -281,12 +330,10 @@ export function useCamera({
         r = sr; g = sg; b = sb;
       }
 
-      // Brightness
       r *= brightness;
       g *= brightness;
       b *= brightness;
 
-      // Contrast
       const contrastFactor = (259 * (contrast + 255)) / (255 * (259 - contrast));
       r = contrastFactor * (r - 128) + 128;
       g = contrastFactor * (g - 128) + 128;
@@ -321,14 +368,12 @@ export function useCamera({
     const photoX = frame.config.photoX * scale;
     const photoY = frame.config.photoY * scale;
 
-    // Draw frame scaled to canvas width, centered vertically
     const frameH = frame.config.frameH * scale;
     const offsetY = (canvasHeight - frameH) / 2;
 
     ctx.drawImage(img, 0, offsetY, canvasWidth, frameH);
 
     // Re-draw photo on top of frame at photo viewport
-    // The photo was already drawn before filter; re-draw to ensure it sits on frame
     if (videoRef.current) {
       ctx.drawImage(
         videoRef.current,
