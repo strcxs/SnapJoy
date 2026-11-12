@@ -16,20 +16,34 @@ export default function CameraPage({
   const [photoResult, setPhotoResult] = useState<PhotoResult | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [eventId, setEventId] = useState<string | null>(null);
+  const [event, setEvent] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     document.title = `Kamera - ${eventSlug} | Snapjoy`;
   }, [eventSlug]);
 
-  // Ambil event ID dari slug (untuk demo, mapping slug -> event ID sederhana)
-  // Di production sebenarnya ini akan diambil dari database via API
+  // Fetch event dari API berdasarkan slug
   useEffect(() => {
-    const slugToEventId: Record<string, string> = {
-      "wedding-2025": "11111111-1111-1111-1111-111111111111",
-      "acara-contoh": "22222222-2222-2222-2222-222222222222",
+    let cancelled = false;
+
+    async function fetchEvent() {
+      try {
+        const response = await fetch(`/api/events/${eventSlug}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setEvent({ id: data.data.id, name: data.data.name });
+          }
+        }
+      } catch (err) {
+        console.error("Fetch event error:", err);
+      }
+    }
+
+    fetchEvent();
+    return () => {
+      cancelled = true;
     };
-    setEventId(slugToEventId[eventSlug] || null);
   }, [eventSlug]);
 
   const handlePhotoCaptured = (result: PhotoResult) => {
@@ -45,7 +59,7 @@ export default function CameraPage({
   };
 
   const handleUsePhoto = async (result: PhotoResult) => {
-    if (!eventId) {
+    if (!event) {
       setUploadError("ID acara tidak tersedia.");
       return;
     }
@@ -55,7 +69,7 @@ export default function CameraPage({
 
     try {
       const formData = new FormData();
-      formData.append("eventId", eventId);
+      formData.append("eventId", event.id);
       formData.append("file", new File([result.blob], "photo.webp", { type: "image/webp" }));
       formData.append(
         "guestSessionId",
@@ -66,6 +80,7 @@ export default function CameraPage({
       formData.append("filterKey", result.filterKey);
       formData.append("frameId", result.frameId ?? "");
       formData.append("capturedAt", new Date().toISOString());
+      formData.append("moderationMode", "auto_publish");
 
       const response = await fetch("/api/uploads", {
         method: "POST",
