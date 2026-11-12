@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  allowedDevOrigins: [
+    "3000-ie3ymskm87edea41zp6d0.e2b.app",
+    "localhost",
+  ],
 };
 
 const pwaConfig = {
