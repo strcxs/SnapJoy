@@ -1,3 +1,5 @@
+import "./globals.css";
+
 export const metadata = {
   title: "Snapjoy — Capture the moment, share the joy",
   description:

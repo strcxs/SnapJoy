@@ -20,9 +20,7 @@ export default function HomePage() {
           <div className="w-20 h-20 rounded-2xl bg-sj-accent flex items-center justify-center text-sj-brand font-bold text-2xl shadow-lg mx-auto mb-4">
             SQ
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Snapjoy
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight">Snapjoy</h1>
           <p className="text-lg text-sj-muted max-w-sm mx-auto leading-relaxed">
             Platform photo booth berbasis web untuk acara Anda. Tamu memindai
             QR, mengambil foto dengan frame dan filter, lalu mengunggah ke
@@ -30,10 +28,10 @@ export default function HomePage() {
           </p>
 
           <div className="grid grid-cols-1 gap-4 max-w-sm mx-auto">
-            <Link href="#" className="sj-btn-primary w-full">
+            <Link href="/dashboard" className="sj-btn-primary w-full">
               Buat Acara Baru
             </Link>
-            <Link href="#" className="sj-btn-outline w-full">
+            <Link href="/e/contoh-acara/gallery" className="sj-btn-outline w-full">
               Lihat Contoh Galeri
             </Link>
           </div>
