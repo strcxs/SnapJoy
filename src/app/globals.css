@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+@theme {
+  --color-sj-brand: #0f172a;
+  --color-sj-brand-light: #1e293b;
+  --color-sj-accent: #f59e0b;
+  --color-sj-accent-hover: #d97706;
+  --color-sj-success: #10b981;
+  --color-sj-danger: #ef4444;
+  --color-sj-muted: #64748b;
+  --color-sj-bg-soft: #f8fafc;
+  --color-sj-border: #e2e8f0;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", monospace;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+.sj-container {
+  width: 100%;
+  max-width: 100%;
+  padding: 0 1rem;
+}
+
+.sj-card {
+  @apply rounded-2xl bg-white p-6 shadow-sm border border-sj-border;
+}
+
+.sj-btn-primary {
+  @apply inline-flex items-center justify-center rounded-xl bg-sj-brand px-6 py-3 text-white font-semibold shadow-sm transition-colors hover:bg-sj-brand-light active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.sj-btn-outline {
+  @apply inline-flex items-center justify-center rounded-xl border border-sj-border bg-white px-6 py-3 text-sj-brand font-semibold shadow-sm transition-colors hover:bg-sj-bg-soft active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.sj-btn-danger {
+  @apply inline-flex items-center justify-center rounded-xl bg-sj-danger px-6 py-3 text-white font-semibold shadow-sm transition-colors hover:bg-red-600 active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.sj-input {
+  @apply block w-full rounded-xl border border-sj-border bg-white px-4 py-2.5 text-sm text-sj-brand placeholder-sj-muted focus:border-sj-accent focus:ring-1 focus:ring-sj-accent focus:outline-none disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.sj-label {
+  @apply block text-sm font-medium text-sj-brand mb-1.5;
+}
+
+.sj-text-muted {
+  color: var(--color-sj-muted);
+}
+
+.camera-viewport {
+  position: relative;
+  overflow: hidden;
+  background: #000;
+  border-radius: 1rem;
+}
+
+.camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(1);
+}
+
+.camera-video.mirrored {
+  transform: scaleX(-1);
+}
+
+.canvas-result {
+  width: 100%;
+  height: auto;
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+@keyframes sj-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.sj-pulse {
+  animation: sj-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
