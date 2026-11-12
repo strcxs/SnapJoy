@@ -25,29 +25,26 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
     stopStream,
   } = useCamera();
 
-  // Hitung aspect ratio untuk viewport kamera
-  const aspectRatio =
-    state.videoWidth && state.videoHeight
-      ? state.videoWidth / state.videoHeight
-      : 3 / 4;
+  // Paksa aspect ratio potrait (9:16) untuk kamera
+  const aspectRatio = 9 / 16;
 
   const filterButtonClass = (filter: FilterPreset) => {
     const isActive = currentFilter.key === filter.key;
-    return `flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all ${isActive
-      ? "bg-sj-brand text-white shadow-sm"
-      : "bg-white/20 backdrop-blur-sm text-white/90 hover:bg-white/30"}`;
+    return `flex flex-col items-center gap-1 px-2 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 ${isActive
+      ? "bg-sj-brand text-white shadow-sm scale-105"
+      : "bg-white/20 backdrop-blur-sm text-white/90 hover:bg-white/30 scale-100"}`;
   };
 
   const frameButtonClass = (frame: FrameOption) => {
     const isActive = currentFrame?.id === frame.id;
-    return `w-12 h-16 rounded-lg border-2 transition-all ${isActive
-      ? "border-sj-accent shadow-sm"
-      : "border-transparent bg-white/20 hover:border-white/40"}`;
+    return `w-14 h-20 rounded-lg border-2 transition-all duration-200 ${isActive
+      ? "border-sj-accent shadow-sm scale-105"
+      : "border-transparent bg-white/20 hover:border-white/40 scale-100"}`;
   };
 
   const shutterButtonClass = () => {
-    return `relative w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white flex items-center justify-center transition-all active:scale-95 disabled:opacity-50 ${
-      state.isCapturing ? "border-white/50" : "bg-white"
+    return `relative w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white flex items-center justify-center transition-all duration-200 active:scale-95 disabled:opacity-50 ${
+      state.isCapturing ? "border-white/50 animate-pulse" : "bg-white shadow-lg"
     }`;
   };
 
@@ -95,11 +92,11 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
       {/* Camera viewport (live preview) */}
       {!state.hasCaptured && (
         <div className="flex-1 relative camera-viewport w-full">
-          {/* Aspect ratio box untuk video - mencegah collapse/layar hitam */}
+          {/* Aspect ratio box untuk kamera potrait (9:16) */}
           <div
-            className="relative w-full overflow-hidden bg-black rounded-xl"
+            className="relative w-full overflow-hidden bg-black rounded-2xl"
             style={{
-              aspectRatio: aspectRatio > 0 ? aspectRatio : 3 / 4,
+              aspectRatio,
             }}
           >
             <video
@@ -119,7 +116,7 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
             />
             <canvas ref={canvasRef} className="hidden" />
 
-            {/* Loading overlay while starting - render saat belum diinisialisasi */}
+            {/* Loading overlay while starting */}
             {!state.isInitialized && !state.isError && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 z-20">
                 <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-3" />
@@ -130,10 +127,10 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
             )}
           </div>
 
-          {/* Capture overlay controls */}
-          <div className="absolute inset-0 flex flex-col justify-between p-3 sm:p-4 pointer-events-none">
-            <div className="flex items-center justify-between px-2 sm:px-4">
-              <div className="flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-white text-xs sm:text-sm font-medium">
+          {/* Capture overlay controls - pointer-events-auto agar semua tombol bisa diklik */}
+          <div className="absolute inset-0 flex flex-col justify-between p-3 sm:p-4">
+            <div className="flex items-center justify-between px-2 sm:px-4 pointer-events-auto">
+              <div className="flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-white text-xs sm:text-sm font-medium pointer-events-none">
                 {state.facingMode === "environment"
                   ? "Kamera Belakang"
                   : "Kamera Depan"}
@@ -141,19 +138,19 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
               <button
                 onClick={switchCamera}
                 disabled={state.isCapturing}
-                className="p-2.5 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full text-white transition-colors active:scale-95 disabled:opacity-50"
+                className="p-2.5 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full text-white transition-all duration-200 active:scale-95 disabled:opacity-50 pointer-events-auto"
                 aria-label="Ganti kamera depan/belakang"
                 aria-pressed={false}
               >
-                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656-2.12 2.122" />
                 </svg>
               </button>
             </div>
 
-            <div className="flex flex-col items-center justify-end flex-1 pr-2 sm:pr-4">
+            <div className="flex flex-col items-center justify-end flex-1 pr-2 sm:pr-4 pointer-events-auto">
               {/* Filter selector */}
-              <div className="flex flex-row gap-2 overflow-x-auto pb-3 sm:pb-4 scrollbar-hide">
+              <div className="flex flex-row gap-2 overflow-x-auto pb-3 sm:pb-4 scrollbar-hide pointer-events-auto">
                 {filters.map((filter: FilterPreset) => (
                   <button
                     key={filter.key}
@@ -161,7 +158,7 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
                     aria-pressed={currentFilter.key === filter.key}
                     className={filterButtonClass(filter)}
                   >
-                    <span className="w-3 h-3 rounded-full border border-white/20"></span>
+                    <span className="w-3 h-3 rounded-full border border-white/20 pointer-events-none"></span>
                     {filter.label}
                   </button>
                 ))}
@@ -169,7 +166,7 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
 
               {/* Frame selector */}
               {frames.length > 1 && (
-                <div className="flex flex-row gap-2 overflow-x-auto px-2 sm:px-4 pb-2 sm:pb-4 scrollbar-hide">
+                <div className="flex flex-row gap-2 overflow-x-auto px-2 sm:px-4 pb-2 sm:pb-4 scrollbar-hide pointer-events-auto">
                   {frames.map((frame: FrameOption) => (
                     <button
                       key={frame.id}
@@ -180,7 +177,7 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
                       <img
                         src={frame.previewPath || frame.assetPath}
                         alt={frame.name}
-                        className="w-full h-full object-cover rounded-md"
+                        className="w-full h-full object-cover rounded-md pointer-events-none"
                       />
                     </button>
                   ))}
@@ -188,7 +185,7 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
               )}
 
               {/* Shutter button - lebih besar untuk mobile (thumb-friendly) */}
-              <div className="flex-1 flex items-end justify-center pb-4 sm:pb-6">
+              <div className="flex-1 flex items-end justify-center pb-4 sm:pb-6 pointer-events-auto">
                 <button
                   onClick={async () => {
                     const result = await capture();
@@ -200,9 +197,9 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
                   className={shutterButtonClass()}
                   aria-label="Ambil foto"
                 >
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/20" />
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/20 pointer-events-none" />
                   {state.isCapturing && (
-                    <div className="absolute inset-0 flex items-center justify-center text-white text-xs sm:text-sm font-medium animate-pulse">
+                    <div className="absolute inset-0 flex items-center justify-center text-white text-xs sm:text-sm font-medium animate-pulse pointer-events-none">
                       Memproses…
                     </div>
                   )}
@@ -210,7 +207,7 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
               </div>
             </div>
 
-            <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 text-white text-xs sm:text-sm font-medium bg-black/60 backdrop-blur-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
+            <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 text-white text-xs sm:text-sm font-medium bg-black/60 backdrop-blur-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-full pointer-events-none">
               {state.facingMode === "environment" ? "Kamera Belakang Aktif" : "Kamera Depan Aktif"}
             </div>
           </div>
