@@ -186,8 +186,6 @@ export function useCamera({
       hasCaptured: false,
     }));
 
-    // enumerateDevices sering mengembalikan kosong di mobile sebelum izin.
-    // Jangan treat sebagai error — lanjutkan ke getUserMedia.
     let resolvedMode = facingMode;
     if (state.availableDevices.length > 0) {
       resolvedMode = resolveFacingMode(facingMode);
@@ -212,7 +210,6 @@ export function useCamera({
 
     let lastError: any = null;
 
-    // Coba dengan facingMode dulu, lalu tanpa facingMode sebagai fallback terakhir
     const attempts = state.availableDevices.length > 0 ? [true, false] : [false];
 
     for (const useFacingMode of attempts) {
@@ -549,28 +546,38 @@ export function useCamera({
     canvasHeight: number,
     frame: FrameOption
   ) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
 
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = reject;
-      img.src = frame.assetPath;
-    });
+      await new Promise<void>((resolve) => {
+        img.onload = () => resolve();
+        // Jika gambar gagal dimuat (mis. file frame tidak ada),
+        // tidak reject — biarkan capture tetap lanjut tanpa frame
+        img.onerror = () => resolve();
+        img.src = frame.assetPath;
+      });
 
-    const scale = canvasWidth / frame.config.frameW;
-    const photoW = frame.config.photoW * scale;
-    const photoH = frame.config.photoH * scale;
-    const photoX = frame.config.photoX * scale;
-    const photoY = frame.config.photoY * scale;
+      // Hanya gambar frame jika gambar berhasil dimuat
+      if (img.complete && img.naturalWidth > 0) {
+        const scale = canvasWidth / frame.config.frameW;
+        const photoW = frame.config.photoW * scale;
+        const photoH = frame.config.photoH * scale;
+        const photoX = frame.config.photoX * scale;
+        const photoY = frame.config.photoY * scale;
 
-    const frameH = frame.config.frameH * scale;
-    const offsetY = (canvasHeight - frameH) / 2;
+        const frameH = frame.config.frameH * scale;
+        const offsetY = (canvasHeight - frameH) / 2;
 
-    ctx.drawImage(img, 0, offsetY, canvasWidth, frameH);
+        ctx.drawImage(img, 0, offsetY, canvasWidth, frameH);
 
-    if (videoRef.current) {
-      ctx.drawImage(videoRef.current, photoX, photoY, photoW, photoH);
+        if (videoRef.current) {
+          ctx.drawImage(videoRef.current, photoX, photoY, photoW, photoH);
+        }
+      }
+    } catch (err) {
+      console.error("Frame overlay error:", err);
+      // Jangan crash capture jika frame gagal — lanjutkan tanpa frame
     }
   };
 

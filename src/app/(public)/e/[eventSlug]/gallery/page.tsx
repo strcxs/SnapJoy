@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getEventBySlug, getPhotosByEventId } from "@/lib/storage";
+import { Gallery } from "@/components/gallery/GalleryLightbox";
 
 export default async function GalleryPage({
   params,
@@ -8,14 +9,18 @@ export default async function GalleryPage({
 }) {
   const { eventSlug } = await params;
 
-  // Ambil detail event langsung dari storage
   const event = await getEventBySlug(eventSlug);
   if (!event) {
     notFound();
   }
 
-  // Ambil foto yang dipublikasikan
   const photos = await getPhotosByEventId(event.id, "published");
+
+  const clientPhotos = photos.map((p: any) => ({
+    id: p.id,
+    storage_path: p.storage_path,
+    eventId: p.event_id,
+  }));
 
   return (
     <div className="flex flex-col min-h-screen bg-sj-bg-soft text-sj-brand">
@@ -60,21 +65,7 @@ export default async function GalleryPage({
               </a>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {photos.map((photo: any) => (
-                <div key={photo.id} className="relative group overflow-hidden rounded-xl bg-zinc-200">
-                  <img
-                    src={`/api/uploads/${event.id}/${photo.storage_path.split("/").pop()}`}
-                    alt={`Foto ${photo.id}`}
-                    className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-200"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-opacity flex items-center justify-center">
-                    <span className="text-white text-xs font-medium">Lihat</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <Gallery photos={clientPhotos} eventId={event.id} />
           )}
         </div>
       </main>

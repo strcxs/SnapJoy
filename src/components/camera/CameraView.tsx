@@ -25,8 +25,11 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
     stopStream,
   } = useCamera();
 
-  // Paksa aspect ratio potrait (9:16) untuk kamera
-  const aspectRatio = 9 / 16;
+  // Aspect ratio berdasarkan dimensi video aktual (portrait untuk HP, landscape untuk laptop)
+  const aspectRatio =
+    state.videoWidth && state.videoHeight
+      ? state.videoWidth / state.videoHeight
+      : 3 / 4;
 
   const filterButtonClass = (filter: FilterPreset) => {
     const isActive = currentFilter.key === filter.key;
@@ -92,11 +95,11 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
       {/* Camera viewport (live preview) */}
       {!state.hasCaptured && (
         <div className="flex-1 relative camera-viewport w-full">
-          {/* Aspect ratio box untuk kamera potrait (9:16) */}
+          {/* Aspect ratio box mengikuti dimensi video aktual (portrait/landscape) */}
           <div
             className="relative w-full overflow-hidden bg-black rounded-2xl"
             style={{
-              aspectRatio,
+              aspectRatio: aspectRatio > 0 ? aspectRatio : 3 / 4,
             }}
           >
             <video
@@ -111,8 +114,8 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
               muted
               width={state.videoWidth || 640}
               height={state.videoHeight || 480}
-              className="camera-video w-full h-full object-cover"
-              style={{ filter: currentFilter.cssFilter }}
+              className="camera-video w-full h-full object-contain"
+              style={{ filter: currentFilter.cssFilter, background: "#000" }}
             />
             <canvas ref={canvasRef} className="hidden" />
 
@@ -127,7 +130,7 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
             )}
           </div>
 
-          {/* Capture overlay controls - pointer-events-auto agar semua tombol bisa diklik */}
+          {/* Capture overlay controls */}
           <div className="absolute inset-0 flex flex-col justify-between p-3 sm:p-4">
             <div className="flex items-center justify-between px-2 sm:px-4 pointer-events-auto">
               <div className="flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-white text-xs sm:text-sm font-medium pointer-events-none">
@@ -184,7 +187,7 @@ export function CameraView({ onPhotoCaptured }: CameraViewProps) {
                 </div>
               )}
 
-              {/* Shutter button - lebih besar untuk mobile (thumb-friendly) */}
+              {/* Shutter button */}
               <div className="flex-1 flex items-end justify-center pb-4 sm:pb-6 pointer-events-auto">
                 <button
                   onClick={async () => {
