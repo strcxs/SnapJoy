@@ -9,15 +9,14 @@ export interface PhotoPreviewProps {
 }
 
 export function PhotoPreview({ result, onRetake, onUsePhoto }: PhotoPreviewProps) {
-  // Hitung aspect ratio untuk container foto
+  // Hitung aspect ratio berdasarkan dimensi foto aktual (tidak dipaksa)
   const aspectRatio =
     result.width && result.height ? result.width / result.height : 3 / 4;
 
   return (
     <div className="flex flex-col h-full w-full max-w-[500px] mx-auto p-2 sm:p-4">
-      {/* Photo result */}
+      {/* Photo result - object-contain agar tidak terpotong/zoom, sesuai preview kamera */}
       <div className="flex-1 relative overflow-hidden bg-black rounded-xl">
-        {/* Aspect ratio box untuk foto */}
         <div
           className="relative w-full"
           style={{
@@ -26,10 +25,9 @@ export function PhotoPreview({ result, onRetake, onUsePhoto }: PhotoPreviewProps
         >
           <img
             src={result.dataUrl}
-            alt="Hasil foto dengan frame"
-            className="canvas-result w-full h-full object-cover"
+            alt="Hasil foto"
+            className="canvas-result w-full h-full object-contain"
           />
-          <canvas ref={(el) => {}} className="hidden" />
         </div>
       </div>
 
